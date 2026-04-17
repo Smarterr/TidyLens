@@ -1,6 +1,7 @@
 // src/components/ImageCard.tsx
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image'; // <--- The magic fix
 import { SortedImage } from '../types';
 
 interface ImageCardProps {
@@ -16,9 +17,9 @@ export default function ImageCard({ photo, isSelected, onToggle }: ImageCardProp
       onPress={() => onToggle(photo.id)}
       activeOpacity={0.8}
     >
-      <Image source={{ uri: photo.uri }} style={styles.image} />
+      {/* expo-image automatically handles Apple's ph:// URIs */}
+      <Image source={photo.uri} style={styles.image} contentFit="cover" />
       
-      {/* Visual indicator for selection */}
       {isSelected && (
         <View style={styles.checkOverlay}>
           <Text style={styles.checkText}>✓</Text>
@@ -41,10 +42,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     aspectRatio: 1, 
     borderWidth: 3,
-    borderColor: 'transparent', // Invisible border by default
+    borderColor: 'transparent', 
   },
   selectedCard: {
-    borderColor: '#007AFF', // Blue border when selected
+    borderColor: '#007AFF', 
   },
   image: {
     width: '100%',

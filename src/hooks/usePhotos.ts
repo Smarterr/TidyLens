@@ -1,7 +1,7 @@
 // src/hooks/usePhotos.ts
 import { useState, useEffect, useCallback } from 'react';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { SortedImage, FilterType } from '../types';
 import { bytesToMB } from '../utils/formatSize';
 

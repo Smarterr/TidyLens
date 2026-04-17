@@ -1,55 +1,69 @@
 // src/hooks/usePhotos.ts
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
-import { SortedImage } from '../types';
+import { SortedImage, FilterType } from '../types';
 import { bytesToMB } from '../utils/formatSize';
 
-export const usePhotos = (hasPermission: boolean) => {
+export const usePhotos = (hasPermission: boolean, filter: FilterType) => {
   const [photos, setPhotos] = useState<SortedImage[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Don't try to fetch if we don't have permission yet
+  const loadPhotos = useCallback(async () => {
     if (!hasPermission) return;
+    setLoading(true);
+    
+    try {
+      let assetsOptions: MediaLibrary.AssetsOptions = {
+        first: 100, // We start with 100 for speed
+        sortBy: [MediaLibrary.SortBy.creationTime],
+        mediaType: filter === 'Videos' ? ['video'] : ['photo'],
+      };
 
-    const loadPhotos = async () => {
-      setLoading(true);
-      try {
-        const media = await MediaLibrary.getAssetsAsync({
-          mediaType: 'photo',
-          first: 100, 
-        });
-
-        // We must use Promise.all because fetching file sizes is an async action
-        const processedPhotos: SortedImage[] = await Promise.all(
-          media.assets.map(async (asset) => {
-            // Look up the physical file on the device
-            const fileInfo = await FileSystem.getInfoAsync(asset.uri);
-            
-            // If the file safely exists, grab its size, otherwise default to 0
-            const sizeInBytes = fileInfo.exists ? fileInfo.size : 0;
-
-            return {
-              ...asset,
-              fileSizeMB: bytesToMB(sizeInBytes),
-            };
-          })
-        );
-
-        // Sort the array by file size, largest first (descending order)
-        processedPhotos.sort((a, b) => b.fileSizeMB - a.fileSizeMB);
-
-        setPhotos(processedPhotos);
-      } catch (error) {
-        console.error("Error fetching photos:", error);
-      } finally {
-        setLoading(false);
+      // Handle "Oldest" sorting
+      if (filter === 'Oldest') {
+        assetsOptions.sortBy = [[MediaLibrary.SortBy.creationTime, false]];
       }
-    };
 
+      // Handle "Screenshots" - We have to find the specific album first
+      if (filter === 'Screenshots') {
+        const albums = await MediaLibrary.getAlbumsAsync();
+        const screenshotAlbum = albums.find(a => a.title === 'Screenshots' || a.title === 'Recent');
+        if (screenshotAlbum) {
+          assetsOptions.album = screenshotAlbum;
+        }
+      }
+
+      const media = await MediaLibrary.getAssetsAsync(assetsOptions);
+
+      const processedPhotos: SortedImage[] = await Promise.all(
+        media.assets.map(async (asset) => {
+          const fileInfo = await FileSystem.getInfoAsync(asset.uri);
+          const sizeInBytes = fileInfo.exists ? (fileInfo as any).size : 0;
+          return {
+            ...asset,
+            fileSizeMB: bytesToMB(sizeInBytes),
+          };
+        })
+      );
+
+      // Final sorting for "Largest" (Default behavior)
+      if (filter === 'Largest' || filter === 'Videos' || filter === 'Screenshots') {
+        processedPhotos.sort((a, b) => b.fileSizeMB - a.fileSizeMB);
+      }
+
+      setPhotos(processedPhotos);
+    } catch (error) {
+      console.error("Error fetching photos:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [hasPermission, filter]);
+
+  useEffect(() => {
     loadPhotos();
-  }, [hasPermission]);
+  }, [loadPhotos]);
 
-  return { photos, loading };
+  // We return setPhotos so the HomeScreen can manually remove deleted items
+  return { photos, loading, setPhotos, refresh: loadPhotos };
 };

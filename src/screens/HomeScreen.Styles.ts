@@ -1,4 +1,3 @@
-// src/screens/HomeScreen.styles.ts
 import { StyleSheet } from 'react-native';
 
 export default StyleSheet.create({
@@ -9,7 +8,7 @@ export default StyleSheet.create({
   subtitle: { fontSize: 14, color: '#666', marginTop: 2 },
   filterContainer: { borderBottomWidth: 1, borderColor: '#f0f0f0', paddingBottom: 5 },
   text: { fontSize: 16, textAlign: 'center', marginBottom: 20 },
-  loadingText: { marginTop: 10, color: 'gray', fontWeight: '500' },
+  loadingText: { marginTop: 10, color: 'gray', fontWeight: '500' }, // Capital T
   button: { backgroundColor: '#000', padding: 15, borderRadius: 12 },
   buttonText: { color: 'white', fontWeight: '700' },
   deleteButton: { backgroundColor: '#FF3B30', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20 },

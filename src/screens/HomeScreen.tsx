@@ -16,7 +16,8 @@ export default function HomeScreen() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>('Largest');
   
-  const { photos, loading } = usePhotos(hasPermission);
+  // FIX: Added 'activeFilter' as the 2nd argument and destuctured 'setPhotos'
+  const { photos, loading, setPhotos } = usePhotos(hasPermission, activeFilter);
 
   useEffect(() => {
     if (permissionResponse?.status === 'granted') {
@@ -31,17 +32,36 @@ export default function HomeScreen() {
   };
 
   const handleDelete = async () => {
-    try {
-      const assetsToDelete = photos.filter(photo => selectedIds.includes(photo.id));
-      const success = await MediaLibrary.deleteAssetsAsync(assetsToDelete);
-      if (success) {
-        Alert.alert("Success", "Items deleted!");
-        setSelectedIds([]); 
-      }
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Could not delete.");
-    }
+    if (selectedIds.length === 0) return;
+
+    // Professional Deletion Flow
+    Alert.alert(
+      "Delete Photos",
+      `Are you sure you want to delete ${selectedIds.length} items? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              const assetsToDelete = photos.filter(p => selectedIds.includes(p.id));
+              const success = await MediaLibrary.deleteAssetsAsync(assetsToDelete);
+              
+              if (success) {
+                // OPTIMISTIC UI: Remove from the screen immediately so it feels fast
+                setPhotos(prevPhotos => 
+                  prevPhotos.filter(p => !selectedIds.includes(p.id))
+                );
+                setSelectedIds([]);
+              }
+            } catch (e) {
+              Alert.alert("Error", "The OS blocked the deletion. This usually happens if the photo is synced to iCloud.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (!hasPermission) {
@@ -90,7 +110,7 @@ export default function HomeScreen() {
             data={photos}
             keyExtractor={(item) => item.id}
             numColumns={3}
-            {...({ estimatedItemSize: 120 } as any)} // TS fix: Bypasses the broken typing file
+            {...({ estimatedItemSize: 120 } as any)} 
             extraData={selectedIds}
             renderItem={({ item }) => (
               <ImageCard 

@@ -1,9 +1,8 @@
-// src/types/index.ts
-import { Asset } from 'expo-media-library';
+import * as MediaLibrary from 'expo-media-library';
 
-export interface SortedImage extends Asset {
-  fileSizeMB: number;
-}
-
-// Add this!
 export type FilterType = 'Largest' | 'Videos' | 'Screenshots' | 'Oldest';
+
+export interface SortedImage extends MediaLibrary.Asset {
+  fileSizeMB: number;
+  isICloud?: boolean; // <-- Add this new property
+}

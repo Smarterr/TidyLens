@@ -1,7 +1,8 @@
 // src/components/ImageCard.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Image } from 'expo-image'; // <--- The magic fix
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons'; // <-- Brought in the icons!
 import { SortedImage } from '../types';
 
 interface ImageCardProps {
@@ -17,12 +18,18 @@ export default function ImageCard({ photo, isSelected, onToggle }: ImageCardProp
       onPress={() => onToggle(photo.id)}
       activeOpacity={0.8}
     >
-      {/* expo-image automatically handles Apple's ph:// URIs */}
       <Image source={photo.uri} style={styles.image} contentFit="cover" />
       
       {isSelected && (
         <View style={styles.checkOverlay}>
           <Text style={styles.checkText}>✓</Text>
+        </View>
+      )}
+
+      {/* THE NEW CLOUD ICON */}
+      {photo.isICloud && (
+        <View style={styles.cloudIcon}>
+          <Ionicons name="cloud" size={14} color="white" />
         </View>
       )}
 
@@ -54,17 +61,28 @@ const styles = StyleSheet.create({
   checkOverlay: {
     position: 'absolute',
     top: 5,
-    right: 5,
+    left: 5, // Moved to left so it doesn't overlap the cloud icon
     backgroundColor: '#007AFF',
     width: 24,
     height: 24,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
   },
   checkText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  cloudIcon: {
+    position: 'absolute',
+    bottom: 25, // Just above the dark info bar
+    right: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 3,
   },
   infoContainer: {
     position: 'absolute',

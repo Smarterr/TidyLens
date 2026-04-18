@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["NativePhotosModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.nativephotos.NativePhotosModule"]
+  }
+}

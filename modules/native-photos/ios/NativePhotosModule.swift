@@ -17,26 +17,19 @@ public class NativePhotosModule: Module {
         var sizeInBytes: Int64 = 0
         var isICloud = false
 
-        // 1. Get the resources for the asset (this is where the size and cloud info lives)
         let resources = PHAssetResource.assetResources(for: asset)
         
         if let resource = resources.first {
-          // Use 'fileSize' safely. If it's not there, we don't crash, we just assume 0.
+          // 1. Get the real file size
           if let fileSize = (resource as AnyObject).value(forKey: "fileSize") as? Int64 {
             sizeInBytes = fileSize
           }
           
-          // 2. SAFE ICLOUD CHECK: 
-          // If the size is 0 but it's a valid photo, it's almost certainly an iCloud placeholder.
-          // Also check if it's a "Cloud Shared" asset.
-          if sizeInBytes == 0 || asset.sourceType == .typeCloudShared {
-            isICloud = true
+          // 2. THE FIX: 'locallyAvailable' tells us if the full file is physically on the iPhone's SSD.
+          if let locallyAvailable = (resource as AnyObject).value(forKey: "locallyAvailable") as? Bool {
+            // If it is NOT locally available, it means it is taking up iCloud storage, not device storage.
+            isICloud = !locallyAvailable
           }
-        }
-
-        // Skip if user doesn't want iCloud photos
-        if !includeICloud && isICloud {
-            return 
         }
 
         let fileSizeMB = Double(sizeInBytes) / (1024.0 * 1024.0)

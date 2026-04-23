@@ -1,6 +1,5 @@
-import * as MediaLibrary from 'expo-media-library';
-
-export type FilterType = 'Largest' | 'Videos' | 'Screenshots' | 'Oldest' | 'Similar'; // Added 'Similar'
+// src/types/index.ts
+export type FilterType = 'Largest' | 'Videos' | 'Screenshots' | 'Oldest' | 'Similar' | 'Blurry';
 
 export interface SortedImage {
   id: string;
@@ -10,5 +9,5 @@ export interface SortedImage {
   fileSizeMB: number;
   isICloud: boolean;
   isScreenshot?: boolean;
-  similarGroupId?: string; // We will use this later to draw visual boxes around bursts!
+  similarGroupId?: string;
 }

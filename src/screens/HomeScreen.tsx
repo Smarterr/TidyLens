@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Modal, Switch } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'; // <--- NEW: This fixes the harsh bottom cutoff!
+import { SafeAreaView } from 'react-native-safe-area-context'; 
 import * as MediaLibrary from 'expo-media-library';
 import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons'; 
@@ -40,6 +40,34 @@ export default function HomeScreen() {
     setViewMode('grid');
   };
 
+  const handleSmartSelect = () => {
+    if (selectedIds.length > 0) {
+      setSelectedIds([]);
+      return;
+    }
+
+    const idsToSelect: string[] = [];
+    const groups: Record<string, SortedImage[]> = {};
+
+    photos.forEach(photo => {
+      if (photo.similarGroupId) {
+        if (!groups[photo.similarGroupId]) groups[photo.similarGroupId] = [];
+        groups[photo.similarGroupId].push(photo);
+      }
+    });
+
+    Object.values(groups).forEach(group => {
+      if (group.length > 1) {
+        const sortedGroup = [...group].sort((a, b) => b.fileSizeMB - a.fileSizeMB);
+        for (let i = 1; i < sortedGroup.length; i++) {
+          idsToSelect.push(sortedGroup[i].id);
+        }
+      }
+    });
+
+    setSelectedIds(idsToSelect);
+  };
+
   const handleDelete = async () => {
     if (selectedIds.length === 0) return;
 
@@ -53,9 +81,7 @@ export default function HomeScreen() {
           style: "destructive", 
           onPress: async () => {
             try {
-              // FIX: Expo allows us to just pass the array of string IDs directly!
               const success = await MediaLibrary.deleteAssetsAsync(selectedIds);
-              
               if (success) {
                 removeDeletedPhotos(selectedIds);
                 setSelectedIds([]);
@@ -88,7 +114,6 @@ export default function HomeScreen() {
   }
 
   return (
-    // edges={['top']} is the magic trick. It protects the notch, but lets lists scroll perfectly off the bottom!
     <SafeAreaView style={styles.container} edges={['top']}>
       <Modal visible={showSettings} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
@@ -135,30 +160,18 @@ export default function HomeScreen() {
         </View>
       ) : viewMode === 'dashboard' ? (
         
-        /* --- DASHBOARD VIEW --- */
         <View style={styles.dashboardContainer}>
           <View style={styles.heroCard}>
             <Text style={styles.heroTitle}>Total Potential Savings</Text>
             <Text style={styles.heroValue}>{stats.totalSize} GB</Text>
             
-            {/* The side-by-side UI you liked! */}
             {includeICloud && (
-              <View style={{ 
-                flexDirection: 'row', 
-                marginTop: 15, 
-                backgroundColor: 'rgba(255,255,255,0.2)', 
-                padding: 12, 
-                borderRadius: 14, 
-                width: '100%', 
-                justifyContent: 'space-between' 
-              }}>
+              <View style={{ flexDirection: 'row', marginTop: 15, backgroundColor: 'rgba(255,255,255,0.2)', padding: 12, borderRadius: 14, width: '100%', justifyContent: 'space-between' }}>
                 <View style={{ alignItems: 'center', flex: 1 }}>
                   <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '500', opacity: 0.9 }}>Device Storage</Text>
                   <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 2 }}>{stats.localSize} GB</Text>
                 </View>
-                
                 <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.3)', height: '100%' }} />
-                
                 <View style={{ alignItems: 'center', flex: 1 }}>
                   <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '500', opacity: 0.9 }}>iCloud Storage</Text>
                   <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '700', marginTop: 2 }}>{stats.icloudSize} GB</Text>
@@ -178,6 +191,19 @@ export default function HomeScreen() {
               <Text style={styles.categorySubtext}>{stats.similar.count} items in bursts</Text>
             </View>
             <Text style={styles.categorySize}>{stats.similar.size}</Text>
+            <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+          </TouchableOpacity>
+
+          {/* NEW: Blurry Photos Card */}
+          <TouchableOpacity style={styles.categoryCard} onPress={() => handleCategoryPress('Blurry')}>
+            <View style={[styles.categoryIconBox, { backgroundColor: '#E5FFF0' }]}>
+              <Ionicons name="aperture" size={24} color="#34C759" /> 
+            </View>
+            <View style={styles.categoryTextContent}>
+              <Text style={styles.categoryTitle}>Blurry & Low Quality</Text>
+              <Text style={styles.categorySubtext}>{stats.blurry.count} items</Text>
+            </View>
+            <Text style={styles.categorySize}>{stats.blurry.size}</Text>
             <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
           </TouchableOpacity>
           
@@ -220,16 +246,29 @@ export default function HomeScreen() {
 
       ) : (
 
-        /* --- GRID VIEW (Detail Page) --- */
         <View style={{ flex: 1 }}>
-          {/* We only render this box AT ALL if it's the Screenshots tab, fixing the gap! */}
-          {activeFilter === 'Screenshots' && photos.length > 0 && (
+          {/* Dynamic Top Bar for Selection Buttons */}
+          {(activeFilter === 'Screenshots' || activeFilter === 'Similar' || activeFilter === 'Blurry') && photos.length > 0 && (
             <View style={{ paddingHorizontal: 15, paddingBottom: 10, paddingTop: 5, alignItems: 'flex-end' }}>
-              <TouchableOpacity onPress={() => setSelectedIds(selectedIds.length === photos.length ? [] : photos.map(p => p.id))}>
-                <Text style={styles.selectAllText}>
-                  {selectedIds.length === photos.length ? 'Deselect All' : `Select All (${photos.length})`}
-                </Text>
-              </TouchableOpacity>
+              
+              {/* Select All for Screenshots AND Blurry */}
+              {(activeFilter === 'Screenshots' || activeFilter === 'Blurry') && (
+                <TouchableOpacity onPress={() => setSelectedIds(selectedIds.length === photos.length ? [] : photos.map(p => p.id))}>
+                  <Text style={styles.selectAllText}>
+                    {selectedIds.length === photos.length ? 'Deselect All' : `Select All (${photos.length})`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Smart Select specifically for Similar Photos */}
+              {activeFilter === 'Similar' && (
+                <TouchableOpacity onPress={handleSmartSelect}>
+                  <Text style={styles.selectAllText}>
+                    {selectedIds.length > 0 ? 'Deselect All' : '✨ Smart Select Duplicates'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
             </View>
           )}
 
@@ -240,8 +279,8 @@ export default function HomeScreen() {
             numColumns={3}
             estimatedItemSize={120}
             extraData={selectedIds}
-            showsVerticalScrollIndicator={false} // Hides the ugly scrollbar for a cleaner look
-            contentContainerStyle={{ paddingBottom: 160, paddingHorizontal: 2 }} // Leaves room for the delete button
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 160, paddingHorizontal: 2 }} 
             renderItem={({ item }: { item: SortedImage }) => (
               <ImageCard photo={item} isSelected={selectedIds.includes(item.id)} onToggle={toggleSelection} />
             )}

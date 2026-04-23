@@ -20,16 +20,17 @@ public class NativePhotosModule: Module {
         let resources = PHAssetResource.assetResources(for: asset)
         
         if let resource = resources.first {
-          // 1. Get the real file size
           if let fileSize = (resource as AnyObject).value(forKey: "fileSize") as? Int64 {
             sizeInBytes = fileSize
           }
-          
-          // 2. THE FIX: 'locallyAvailable' tells us if the full file is physically on the iPhone's SSD.
           if let locallyAvailable = (resource as AnyObject).value(forKey: "locallyAvailable") as? Bool {
-            // If it is NOT locally available, it means it is taking up iCloud storage, not device storage.
             isICloud = !locallyAvailable
           }
+        }
+
+        // RESTORED: If user toggled iCloud off, skip entirely in Swift
+        if !includeICloud && isICloud {
+            return 
         }
 
         let fileSizeMB = Double(sizeInBytes) / (1024.0 * 1024.0)
